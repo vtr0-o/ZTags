@@ -1,0 +1,12 @@
+tags:
+  # Example:
+  # default tag means if the person has the permission node
+  # 'ztags.tag.default' it will be able to select that tag
+  # you can use the prefix with PlaceholderAPI, like that:
+  # %ztags_prefix%, and suffix %ztags_suffix%
+  # 'weight' is the order in which the tag is placed (only 1 tag)
+  default:
+    name: "&7Member"
+    prefix: "&7[Member]"
+    suffix: ""
+    weight: 1

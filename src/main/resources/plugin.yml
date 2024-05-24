@@ -1,0 +1,17 @@
+name: ZTags
+version: 1.1.0
+author: vtr0_o
+main: net.ztags.ZTags
+
+depend: [PlaceholderAPI]
+
+dependencies:
+  server:
+    PlaceholderAPI:
+      load: BEFORE
+      required: true
+
+commands:
+  tags:
+  tag:
+  ztags:

@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="ZTags">
+    <output-path>$PROJECT_DIR$/../../servers/HoeTools/plugins</output-path>
+    <root id="archive" name="ZTags.jar">
+      <element id="module-output" name="ZTags" />
+    </root>
+  </artifact>
+</component>
