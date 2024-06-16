@@ -3,7 +3,6 @@ package net.ztags;
 import net.ztags.tagHandlingMenus.ListTagModMenu;
 import net.ztags.tagHandlingMenus.ModTagMenu;
 import net.ztags.tagHandlingMenus.TagsMenu;
-import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -61,16 +60,22 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
                 }
 
                 String subCommand = args[1].toLowerCase();
-                if (subCommand.equals("list")) {
-                    handleListTags(player);
-                } else if (subCommand.equals("create")) {
-                    handleCreateTag(player, args);
-                } else if (subCommand.equals("modify")) {
-                    handleModifyTag(player, args);
-                } else if (subCommand.equals("remove")) {
-                    handleRemoveTag(player, args);
-                } else {
-                    player.sendMessage("§cUsage: /ztags tag <list|create|modify|remove> <name>");
+                switch (subCommand) {
+                    case "list":
+                        handleListTags(player);
+                        break;
+                    case "create":
+                        handleCreateTag(player, args);
+                        break;
+                    case "modify":
+                        handleModifyTag(player, args);
+                        break;
+                    case "remove":
+                        handleRemoveTag(player, args);
+                        break;
+                    default:
+                        player.sendMessage("§cUsage: /ztags tag <list|create|modify|remove> <name>");
+                        break;
                 }
                 return true;
             }
@@ -165,9 +170,7 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
                     && !args[1].equalsIgnoreCase("create")) {
                 Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
 
-                for (String tagKey : tagKeys) {
-                    completions.add(tagKey);
-                }
+                completions.addAll(tagKeys);
             }
         }
 
