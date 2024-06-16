@@ -13,5 +13,8 @@ dependencies:
 
 commands:
   tags:
+    permission: ztags.tags
   tag:
+    permission: ztags.tags
   ztags:
+    permission: ztags.admin

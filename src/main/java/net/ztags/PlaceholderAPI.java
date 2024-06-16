@@ -1,6 +1,7 @@
 package net.ztags;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -36,11 +37,23 @@ public class PlaceholderAPI extends PlaceholderExpansion {
     public String onPlaceholderRequest(Player player, @NotNull String identifier) {
 
         if (identifier.equals("prefix")) {
-            return "A";
+            String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
+            return ZTags.tagsConfig.getString("tags."+tagID+".prefix");
         }
 
         if (identifier.equals("suffix")) {
-            return "B";
+            String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
+            return ZTags.tagsConfig.getString("tags."+tagID+".suffix");
+        }
+
+        if (identifier.equals("name")) {
+            String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
+            return ZTags.tagsConfig.getString("tags."+tagID+".name");
+        }
+
+        if (identifier.equals("weight")) {
+            String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
+            return ZTags.tagsConfig.getString("tags."+tagID+".weight");
         }
 
         return null;

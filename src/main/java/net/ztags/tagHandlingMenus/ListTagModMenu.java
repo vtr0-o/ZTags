@@ -1,7 +1,7 @@
 package net.ztags.tagHandlingMenus;
 
 import net.ztags.ZTags;
-import net.ztags.tagHandlingMenus.holders.TagsMenuHolder;
+import net.ztags.tagHandlingMenus.holders.ListModTagMenuHolder;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -13,31 +13,16 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
-public class TagsMenu implements Listener {
-
-    private static class Tag {
-        String key;
-        String name;
-        String prefix;
-        String suffix;
-        int weight;
-
-        Tag(String key, String name, String prefix, String suffix, int weight) {
-            this.key = key;
-            this.name = name;
-            this.prefix = prefix;
-            this.suffix = suffix;
-            this.weight = weight;
-        }
-    }
+public class ListTagModMenu implements Listener {
 
     public static void openMenu(Player player) {
-        Inventory menu = Bukkit.createInventory(new TagsMenuHolder(), 54, "§6§lTags");
+        Inventory menu = Bukkit.createInventory(new ListModTagMenuHolder(),  54, "§aModify Tags");
 
         Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
-        List<Tag> tags = new ArrayList<>();
 
         for (String tagKey : tagKeys) {
             ConfigurationSection tagSection = ZTags.tagsConfig.getConfigurationSection("tags." + tagKey);
@@ -46,38 +31,30 @@ public class TagsMenu implements Listener {
                 String prefix = tagSection.getString("prefix");
                 String suffix = tagSection.getString("suffix");
                 int weight = tagSection.getInt("weight");
-                tags.add(new Tag(tagKey, name, prefix, suffix, weight));
-            }
-        }
+                ItemStack tag = new ItemStack(Material.NAME_TAG, 1);
+                ItemMeta tagMeta = tag.getItemMeta();
+                tagMeta.setDisplayName(ZTags.translateColorCodes(name));
+                List<String> tagLore = new ArrayList<>();
+                tagLore.add("§7prefix: " + ZTags.translateColorCodes(prefix));
+                tagLore.add("§7suffix: " + ZTags.translateColorCodes(suffix));
+                tagLore.add("§7tag id: §f" + tagKey);
+                tagLore.add("§7tag weight: §f" + weight);
+                tagMeta.setLore(tagLore);
+                tag.setItemMeta(tagMeta);
 
-        tags.sort(Comparator.comparingInt(tag -> tag.weight));
-
-        for (Tag tag : tags) {
-            ItemStack tagItem = new ItemStack(Material.NAME_TAG, 1);
-            ItemMeta tagMeta = tagItem.getItemMeta();
-            tagMeta.setDisplayName(ZTags.translateColorCodes(tag.name));
-            List<String> tagLore = new ArrayList<>();
-            if (!Objects.equals(tag.prefix, "")) {
-                tagLore.add("§7prefix: " + ZTags.translateColorCodes(tag.prefix));
+                menu.addItem(tag);
             }
-            if (!Objects.equals(tag.suffix, "")) {
-                tagLore.add("§7suffix: " + ZTags.translateColorCodes(tag.suffix));
-            }
-            tagMeta.setLore(tagLore);
-            tagItem.setItemMeta(tagMeta);
-
-            menu.addItem(tagItem);
         }
 
         player.openInventory(menu);
     }
 
     @EventHandler
-    public void menuClick(InventoryClickEvent event) {
+    public void onClick(InventoryClickEvent event) {
         Player player = (Player) event.getWhoClicked();
-        if (event.getInventory().getHolder() instanceof TagsMenuHolder) {
-            event.setCancelled(true);
+        if (event.getInventory().getHolder() instanceof ListModTagMenuHolder) {
             ItemStack clickedItem = event.getCurrentItem();
+            event.setCancelled(true);
             if (clickedItem != null && clickedItem.getType() != Material.AIR) {
                 Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
 
@@ -87,22 +64,21 @@ public class TagsMenu implements Listener {
                         String name = tagSection.getString("name");
                         String prefix = tagSection.getString("prefix");
                         String suffix = tagSection.getString("suffix");
+                        int weight = tagSection.getInt("weight");
                         ItemStack tag = new ItemStack(Material.NAME_TAG, 1);
                         ItemMeta tagMeta = tag.getItemMeta();
                         tagMeta.setDisplayName(ZTags.translateColorCodes(name));
                         List<String> tagLore = new ArrayList<>();
-                        if (!Objects.equals(prefix, "")) {
-                            tagLore.add("§7prefix: " + ZTags.translateColorCodes(prefix));
-                        }
-                        if (!Objects.equals(suffix, "")) {
-                            tagLore.add("§7suffix: " + ZTags.translateColorCodes(suffix));
-                        }
+                        tagLore.add("§7prefix: " + ZTags.translateColorCodes(prefix));
+                        tagLore.add("§7suffix: " + ZTags.translateColorCodes(suffix));
+                        tagLore.add("§7tag id: §f" + tagKey);
+                        tagLore.add("§7tag weight: §f" + weight);
                         tagMeta.setLore(tagLore);
                         tag.setItemMeta(tagMeta);
 
                         if (clickedItem.equals(tag)) {
                             player.closeInventory();
-                            ZTags.playerDataConfig.set(player.getUniqueId().toString(), tagKey);
+                            ModTagMenu.openMenu(player, tagKey);
                         }
                     }
                 }
