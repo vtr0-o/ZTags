@@ -1,1 +1,8 @@
 lang: pt-BR
+
+mysql:
+  url: "localhost"
+  port: 3306
+  name: "CoolerDatabaseNameForZTags"
+  user: "superCoolUserForZTags"
+  pass: "superStrongPassForZTags"

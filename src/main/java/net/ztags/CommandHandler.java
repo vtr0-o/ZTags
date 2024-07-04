@@ -10,10 +10,7 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class CommandHandler implements CommandExecutor, TabCompleter {
 
@@ -40,16 +37,6 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
             }
 
             if (args[0].equalsIgnoreCase("reload")) {
-                player.sendMessage("§areloading ZTags");
-                player.sendMessage("§asaving config & tags");
-                ZTags.getPlugin(ZTags.class).saveYmlConfig();
-                ZTags.getPlugin(ZTags.class).saveYmlTags();
-                ZTags.getPlugin(ZTags.class).saveYmlPlayerData();
-                player.sendMessage("§aloading config & tags");
-                ZTags.getPlugin(ZTags.class).loadYmlConfig();
-                ZTags.getPlugin(ZTags.class).loadYmlTags();
-                ZTags.getPlugin(ZTags.class).loadYmlPlayerData();
-                player.sendMessage("§aZTags reloaded successfuly");
                 return true;
             }
 
@@ -72,6 +59,9 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
                         break;
                     case "remove":
                         handleRemoveTag(player, args);
+                        break;
+                    case "import":
+                        handleImportTag(player, args);
                         break;
                     default:
                         player.sendMessage("§cUsage: /ztags tag <list|create|modify|remove> <name>");
@@ -97,21 +87,32 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         String tagID = args[2];
         player.sendMessage("Creating tag with name: " + tagID);
 
-        ConfigurationSection tagsSection = ZTags.tagsConfig.getConfigurationSection("tags");
-        if (tagsSection != null) {
-            if (tagsSection.contains(tagID)) {
-                player.sendMessage("§cThis tag already exists");
-            } else {
-                ZTags.tagsConfig.set("tags." + tagID + ".name", tagID);
-                ZTags.tagsConfig.set("tags." + tagID + ".prefix", "");
-                ZTags.tagsConfig.set("tags." + tagID + ".suffix", "");
-                ZTags.tagsConfig.set("tags." + tagID + ".weight", 0);
-                ZTags.getPlugin(ZTags.class).saveYmlTags();
-                player.sendMessage("§aTag created successfully");
-                ModTagMenu.openMenu(player, tagID);
+        if (ZTags.database == null) {
+            ConfigurationSection tagsSection = ZTags.tagsConfig.getConfigurationSection("tags");
+            if (tagsSection != null) {
+                if (tagsSection.contains(tagID)) {
+                    player.sendMessage("§cThis tag already exists");
+                } else {
+                    ZTags.tagsConfig.set("tags." + tagID + ".name", tagID);
+                    ZTags.tagsConfig.set("tags." + tagID + ".prefix", "");
+                    ZTags.tagsConfig.set("tags." + tagID + ".suffix", "");
+                    ZTags.tagsConfig.set("tags." + tagID + ".weight", 0);
+                    ZTags.getPlugin(ZTags.class).saveYmlTags();
+                    player.sendMessage("§aTag created successfully");
+                    ModTagMenu.openMenu(player, tagID);
+                }
             }
         } else {
-            player.sendMessage("§cError: Tags configuration section is missing");
+            List<Tag> tags = ZTags.database.getAllTags();
+
+            boolean tagExists = tags.stream().anyMatch(tag -> tag.getID().equals(tagID));
+            if (tagExists) {
+                player.sendMessage("§cThis tag already exists");
+            } else {
+                Tag tag = new Tag(tagID, tagID, "", "", 0);
+                ZTags.database.addOrUpdateTag(tag);
+                ModTagMenu.openMenu(player, tagID);
+            }
         }
     }
 
@@ -122,12 +123,28 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         }
 
         String tagName = args[2];
-        ConfigurationSection tagsSection = ZTags.tagsConfig.getConfigurationSection("tags");
 
-        if (tagsSection != null && tagsSection.contains(tagName)) {
-            ModTagMenu.openMenu(player, tagName);
+        if (ZTags.database == null) {
+            ConfigurationSection tagsSection = ZTags.tagsConfig.getConfigurationSection("tags");
+            if (tagsSection != null && tagsSection.contains(tagName)) {
+                ModTagMenu.openMenu(player, tagName);
+            } else {
+                player.sendMessage("§cThis tag doesn't exist");
+            }
         } else {
-            player.sendMessage("§cThis tag doesn't exist");
+            List<Tag> tags = ZTags.database.getAllTags();
+            boolean tagExists = false;
+            for (Tag tag : tags) {
+                if (tag.getID().equals(tagName)) {
+                    tagExists = true;
+                    break;
+                }
+            }
+            if (tagExists) {
+                ModTagMenu.openMenu(player, tagName);
+            } else {
+                player.sendMessage("§cThis tag doesn't exist");
+            }
         }
     }
 
@@ -138,14 +155,46 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         }
 
         String tagName = args[2];
-        ConfigurationSection tagsSection = ZTags.tagsConfig.getConfigurationSection("tags");
-
-        if (tagsSection != null && tagsSection.contains(tagName)) {
-            ZTags.tagsConfig.set("tags." + tagName, null);
-            ZTags.getPlugin(ZTags.class).saveYmlTags();
-            player.sendMessage("§aTag removed successfully");
+        if (ZTags.database == null) {
+            ConfigurationSection tagsSection = ZTags.tagsConfig.getConfigurationSection("tags");
+            if (tagsSection != null && tagsSection.contains(tagName)) {
+                ZTags.tagsConfig.set("tags." + tagName, null);
+                ZTags.getPlugin(ZTags.class).saveYmlTags();
+                player.sendMessage("§aTag removed successfully");
+            } else {
+                player.sendMessage("§cThis tag doesn't exist");
+            }
         } else {
-            player.sendMessage("§cThis tag doesn't exist");
+            List<Tag> tags = ZTags.database.getAllTags();
+            boolean tagExists = false;
+            for (Tag tag : tags) {
+                if (tag.getID().equals(tagName)) {
+                    tagExists = true;
+                    break;
+                }
+            }
+
+            if (tagExists) {
+                ZTags.database.deleteTag(tagName);
+                player.sendMessage("§aTag removed successfully");
+            } else {
+                player.sendMessage("§cThis tag doesn't exist");
+            }
+        }
+    }
+
+    private void handleImportTag(Player player, String[] args) {
+        ZTags.getPlugin(ZTags.class).loadYmlTags();
+        Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
+        for (String tagKey : tagKeys) {
+            ConfigurationSection tagSection = ZTags.tagsConfig.getConfigurationSection("tags." + tagKey);
+            if (tagSection != null && player.hasPermission("ztags.tag." + tagKey)) {
+                String name = tagSection.getString("name");
+                String prefix = tagSection.getString("prefix");
+                String suffix = tagSection.getString("suffix");
+                int weight = tagSection.getInt("weight");
+                ZTags.database.addOrUpdateTag(new Tag(tagKey, name, prefix, suffix, weight));
+            }
         }
     }
 
@@ -168,7 +217,22 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
             } else if (args.length == 3 && args[0].equalsIgnoreCase("tag")
                     && !args[1].equalsIgnoreCase("list")
                     && !args[1].equalsIgnoreCase("create")) {
-                Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
+
+                Set<String> tagKeys;
+                if (ZTags.database == null) {
+                    ConfigurationSection tagsSection = ZTags.tagsConfig.getConfigurationSection("tags");
+                    if (tagsSection != null) {
+                        tagKeys = tagsSection.getKeys(false);
+                    } else {
+                        tagKeys = new HashSet<>();
+                    }
+                } else {
+                    List<Tag> tags = ZTags.database.getAllTags();
+                    tagKeys = new HashSet<>();
+                    for (Tag tag : tags) {
+                        tagKeys.add(tag.getID());
+                    }
+                }
 
                 completions.addAll(tagKeys);
             }

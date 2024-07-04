@@ -1,5 +1,6 @@
 package net.ztags.tagHandlingMenus;
 
+import net.ztags.Tag;
 import net.ztags.ZTags;
 import net.ztags.tagHandlingMenus.holders.TagsMenuHolder;
 import org.bukkit.Bukkit;
@@ -17,56 +18,46 @@ import java.util.*;
 
 public class TagsMenu implements Listener {
 
-    private static class Tag {
-        String key;
-        String name;
-        String prefix;
-        String suffix;
-        int weight;
-
-        Tag(String key, String name, String prefix, String suffix, int weight) {
-            this.key = key;
-            this.name = name;
-            this.prefix = prefix;
-            this.suffix = suffix;
-            this.weight = weight;
-        }
-    }
-
     public static void openMenu(Player player) {
         Inventory menu = Bukkit.createInventory(new TagsMenuHolder(), 54, "§6§lTags");
 
-        Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
         List<Tag> tags = new ArrayList<>();
 
-        for (String tagKey : tagKeys) {
-            ConfigurationSection tagSection = ZTags.tagsConfig.getConfigurationSection("tags." + tagKey);
-            if (tagSection != null && player.hasPermission("ztags.tag." + tagKey)) {
-                String name = tagSection.getString("name");
-                String prefix = tagSection.getString("prefix");
-                String suffix = tagSection.getString("suffix");
-                int weight = tagSection.getInt("weight");
-                tags.add(new Tag(tagKey, name, prefix, suffix, weight));
+        if (ZTags.database == null) {
+            Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
+            for (String tagKey : tagKeys) {
+                ConfigurationSection tagSection = ZTags.tagsConfig.getConfigurationSection("tags." + tagKey);
+                if (tagSection != null && player.hasPermission("ztags.tag." + tagKey)) {
+                    String name = tagSection.getString("name");
+                    String prefix = tagSection.getString("prefix");
+                    String suffix = tagSection.getString("suffix");
+                    int weight = tagSection.getInt("weight");
+                    tags.add(new Tag(tagKey, name, prefix, suffix, weight));
+                }
             }
+        } else {
+            tags = ZTags.database.getAllTags();
         }
 
-        tags.sort(Comparator.comparingInt(tag -> tag.weight));
+        tags.sort(Comparator.comparingInt(Tag::getWeight));
 
         for (Tag tag : tags) {
-            ItemStack tagItem = new ItemStack(Material.NAME_TAG, 1);
-            ItemMeta tagMeta = tagItem.getItemMeta();
-            tagMeta.setDisplayName(ZTags.translateColorCodes(tag.name));
-            List<String> tagLore = new ArrayList<>();
-            if (!Objects.equals(tag.prefix, "")) {
-                tagLore.add("§7prefix: " + ZTags.translateColorCodes(tag.prefix));
-            }
-            if (!Objects.equals(tag.suffix, "")) {
-                tagLore.add("§7suffix: " + ZTags.translateColorCodes(tag.suffix));
-            }
-            tagMeta.setLore(tagLore);
-            tagItem.setItemMeta(tagMeta);
+            if (player.hasPermission("ztags.tag."+tag.getID())) {
+                ItemStack tagItem = new ItemStack(Material.NAME_TAG, 1);
+                ItemMeta tagMeta = tagItem.getItemMeta();
+                tagMeta.setDisplayName(ZTags.translateColorCodes(tag.getName()));
+                List<String> tagLore = new ArrayList<>();
+                if (!Objects.equals(tag.getPrefix(), "")) {
+                    tagLore.add("§7prefix: " + ZTags.translateColorCodes(tag.getPrefix()));
+                }
+                if (!Objects.equals(tag.getSuffix(), "")) {
+                    tagLore.add("§7suffix: " + ZTags.translateColorCodes(tag.getSuffix()));
+                }
+                tagMeta.setLore(tagLore);
+                tagItem.setItemMeta(tagMeta);
 
-            menu.addItem(tagItem);
+                menu.addItem(tagItem);
+            }
         }
 
         player.openInventory(menu);
@@ -79,30 +70,48 @@ public class TagsMenu implements Listener {
             event.setCancelled(true);
             ItemStack clickedItem = event.getCurrentItem();
             if (clickedItem != null && clickedItem.getType() != Material.AIR) {
-                Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
+                List<Tag> tags = new ArrayList<>();
 
-                for (String tagKey : tagKeys) {
-                    ConfigurationSection tagSection = ZTags.tagsConfig.getConfigurationSection("tags." + tagKey);
-                    if (tagSection != null && player.hasPermission("ztags.tag." + tagKey)) {
-                        String name = tagSection.getString("name");
-                        String prefix = tagSection.getString("prefix");
-                        String suffix = tagSection.getString("suffix");
-                        ItemStack tag = new ItemStack(Material.NAME_TAG, 1);
-                        ItemMeta tagMeta = tag.getItemMeta();
-                        tagMeta.setDisplayName(ZTags.translateColorCodes(name));
-                        List<String> tagLore = new ArrayList<>();
-                        if (!Objects.equals(prefix, "")) {
-                            tagLore.add("§7prefix: " + ZTags.translateColorCodes(prefix));
+                if (ZTags.database == null) {
+                    Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
+                    for (String tagKey : tagKeys) {
+                        ConfigurationSection tagSection = ZTags.tagsConfig.getConfigurationSection("tags." + tagKey);
+                        if (tagSection != null && player.hasPermission("ztags.tag." + tagKey)) {
+                            String name = tagSection.getString("name");
+                            String prefix = tagSection.getString("prefix");
+                            String suffix = tagSection.getString("suffix");
+                            int weight = tagSection.getInt("weight");
+                            tags.add(new Tag(tagKey, name, prefix, suffix, weight));
                         }
-                        if (!Objects.equals(suffix, "")) {
-                            tagLore.add("§7suffix: " + ZTags.translateColorCodes(suffix));
-                        }
-                        tagMeta.setLore(tagLore);
-                        tag.setItemMeta(tagMeta);
+                    }
+                } else {
+                    tags = ZTags.database.getAllTags();
+                }
 
-                        if (clickedItem.equals(tag)) {
+                tags.sort(Comparator.comparingInt(Tag::getWeight));
+
+                for (Tag tag : tags) {
+                    ItemStack tagItem = new ItemStack(Material.NAME_TAG, 1);
+                    ItemMeta tagMeta = tagItem.getItemMeta();
+                    tagMeta.setDisplayName(ZTags.translateColorCodes(tag.getName()));
+                    List<String> tagLore = new ArrayList<>();
+                    if (!Objects.equals(tag.getPrefix(), "")) {
+                        tagLore.add("§7prefix: " + ZTags.translateColorCodes(tag.getPrefix()));
+                    }
+                    if (!Objects.equals(tag.getSuffix(), "")) {
+                        tagLore.add("§7suffix: " + ZTags.translateColorCodes(tag.getSuffix()));
+                    }
+                    tagMeta.setLore(tagLore);
+                    tagItem.setItemMeta(tagMeta);
+
+                    if (clickedItem.equals(tagItem)) {
+                        if (player.hasPermission("ztags.tag."+tag.getID())) {
                             player.closeInventory();
-                            ZTags.playerDataConfig.set(player.getUniqueId().toString(), tagKey);
+                            if (ZTags.database == null) {
+                                ZTags.playerDataConfig.set(player.getUniqueId().toString(), tag.getID());
+                            } else {
+                                ZTags.database.addOrUpdateUserData(player.getUniqueId().toString(), tag.getID());
+                            }
                         }
                     }
                 }

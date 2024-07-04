@@ -9,6 +9,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.*;
+import java.sql.SQLException;
 import java.util.Set;
 
 public class ZTags extends JavaPlugin {
@@ -22,11 +23,30 @@ public class ZTags extends JavaPlugin {
     public static File playerDataFile;
     public static YamlConfiguration playerDataConfig;
 
+    public static MySQLDatabase database;
+
     @Override
     public void onEnable() {
         loadYmlConfig();
-        loadYmlTags();
-        loadYmlPlayerData();
+
+        String databaseUrl = config.getString("mysql.url");
+        int databasePort = config.getInt("mysql.port");
+        String databaseName = config.getString("mysql.name");
+        String databaseUser = config.getString("mysql.user");
+        String databasePass = config.getString("mysql.pass");
+        if (!databaseUrl.equals("localhost")) {
+            database = new MySQLDatabase(databaseUrl, databasePort, databaseName, databaseUser, databasePass);
+            try {
+                database.connect();
+                getLogger().info("Connected to MySQL/MariaDB!");
+                if (database.getAllTags().isEmpty()) {
+                    getLogger().warning("No tag in database, creating!");
+                    database.addOrUpdateTag(new Tag("default", "&7Member", "&7[Member]", "", 1));
+                }
+            } catch (Exception e) {
+                getLogger().severe("Failed to connect to MySQL/MariaDB: " + e.getMessage());
+            }
+        }
 
         getServer().getPluginManager().registerEvents(new TagsMenu(), this);
         getServer().getPluginManager().registerEvents(new ModTagMenu(), this);
@@ -34,20 +54,29 @@ public class ZTags extends JavaPlugin {
         getCommand("tags").setExecutor(new CommandHandler());
         getCommand("tag").setExecutor(new CommandHandler());
         getCommand("ztags").setExecutor(new CommandHandler());
-        getLogger().info("OK");
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new PlaceholderAPI(this).register();
         } else {
             getLogger().warning("§c§lCould not find PlaceholderAPI! Unloading ZTags.");
-            Bukkit.getPluginManager().disablePlugin(ZTags.getPlugin(ZTags.class));
+            Bukkit.getPluginManager().disablePlugin(this);
         }
     }
 
     @Override
     public void onDisable() {
-        saveYmlConfig();
-        saveYmlTags();
-        saveYmlPlayerData();
+        if (database != null) {
+            try {
+                database.disconnect();
+                getLogger().info("Disconnected from MySQL/MariaDB!");
+            } catch (SQLException e) {
+                getLogger().severe("Failed to disconnect from MySQL/MariaDB: " + e.getMessage());
+                saveYmlTags();
+                saveYmlPlayerData();
+            }
+        } else {
+            saveYmlTags();
+            saveYmlPlayerData();
+        }
     }
 
     public void loadYmlConfig() {
@@ -108,15 +137,28 @@ public class ZTags extends JavaPlugin {
         return ChatColor.translateAlternateColorCodes('&', message);
     }
 
-    public String getTagWithMinimumWeight() {
-        String minWeightTag = null;
+    public Tag getTagWithMinimumWeight() {
+        Tag minWeightTag = null;
         int minWeight = Integer.MAX_VALUE;
-        if (tagsConfig.isConfigurationSection("tags")) {
-            Set<String> tags = tagsConfig.getConfigurationSection("tags").getKeys(false);
-            for (String tag : tags) {
-                int weight = tagsConfig.getInt("tags." + tag + ".weight", Integer.MAX_VALUE);
-                if (weight < minWeight) {
-                    minWeight = weight;
+        if (database == null) {
+            if (tagsConfig.isConfigurationSection("tags")) {
+                Set<String> tags = tagsConfig.getConfigurationSection("tags").getKeys(false);
+                for (String tagKey : tags) {
+                    Tag tag = new Tag(tagsConfig.getString("tags."+tagKey),
+                            tagsConfig.getString("tags."+tagKey+".name"),
+                            tagsConfig.getString("tags."+tagKey+".prefix"),
+                            tagsConfig.getString("tags."+tagKey+".suffix"),
+                            tagsConfig.getInt("tags."+tagKey+".weight"));
+                    if (tag.getWeight() < minWeight) {
+                        minWeight = tag.getWeight();
+                        minWeightTag = tag;
+                    }
+                }
+            }
+        } else {
+            for (Tag tag : database.getAllTags()) {
+                if (tag.getWeight() < minWeight) {
+                    minWeight = tag.getWeight();
                     minWeightTag = tag;
                 }
             }

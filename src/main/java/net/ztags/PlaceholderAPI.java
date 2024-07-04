@@ -36,23 +36,43 @@ public class PlaceholderAPI extends PlaceholderExpansion {
     public String onPlaceholderRequest(Player player, @NotNull String identifier) {
 
         if (identifier.equals("prefix")) {
-            String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
-            return ZTags.tagsConfig.getString("tags."+tagID+".prefix");
+            if (ZTags.database != null) {
+                String tagID = ZTags.database.getTagForUser(player.getUniqueId().toString());
+                return ZTags.database.getTag(tagID).getPrefix();
+            } else {
+                String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
+                return ZTags.tagsConfig.getString("tags."+tagID+".prefix");
+            }
         }
 
         if (identifier.equals("suffix")) {
-            String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
-            return ZTags.tagsConfig.getString("tags."+tagID+".suffix");
+            if (ZTags.database != null) {
+                String tagID = ZTags.database.getTagForUser(player.getUniqueId().toString());
+                return ZTags.database.getTag(tagID).getSuffix();
+            } else {
+                String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
+                return ZTags.tagsConfig.getString("tags."+tagID+".suffix");
+            }
         }
 
         if (identifier.equals("name")) {
-            String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
-            return ZTags.tagsConfig.getString("tags."+tagID+".name");
+            if (ZTags.database != null) {
+                String tagID = ZTags.database.getTagForUser(player.getUniqueId().toString());
+                return ZTags.database.getTag(tagID).getName();
+            } else {
+                String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
+                return ZTags.tagsConfig.getString("tags."+tagID+".name");
+            }
         }
 
         if (identifier.equals("weight")) {
-            String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
-            return ZTags.tagsConfig.getString("tags."+tagID+".weight");
+            if (ZTags.database != null) {
+                String tagID = ZTags.database.getTagForUser(player.getUniqueId().toString());
+                return String.valueOf(ZTags.database.getTag(tagID).getWeight());
+            } else {
+                String tagID = ZTags.playerDataConfig.getString(player.getUniqueId().toString());
+                return ZTags.tagsConfig.getString("tags."+tagID+".weight");
+            }
         }
 
         return null;

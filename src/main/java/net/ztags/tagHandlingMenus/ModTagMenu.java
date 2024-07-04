@@ -1,5 +1,6 @@
 package net.ztags.tagHandlingMenus;
 
+import net.ztags.Tag;
 import net.ztags.ZTags;
 import net.ztags.tagHandlingMenus.holders.ModTagMenuHolder;
 import org.bukkit.Bukkit;
@@ -24,16 +25,23 @@ public class ModTagMenu implements Listener {
     public static void openMenu(Player player, String tagID) {
         Inventory menu = Bukkit.createInventory(new ModTagMenuHolder(tagID), 54, "§6Modify tag '§r" + tagID + "§6'");
 
-        String tagName = ZTags.tagsConfig.getString("tags."+tagID+".name");
-        String tagPrefix = ZTags.tagsConfig.getString("tags."+tagID+".prefix");
-        String tagSuffix = ZTags.tagsConfig.getString("tags."+tagID+".suffix");
-        int tagWeight = ZTags.tagsConfig.getInt("tags."+tagID+".weight");
+        Tag tag;
+
+        if (ZTags.database == null) {
+            String tagName = ZTags.tagsConfig.getString("tags." + tagID + ".name");
+            String tagPrefix = ZTags.tagsConfig.getString("tags." + tagID + ".prefix");
+            String tagSuffix = ZTags.tagsConfig.getString("tags." + tagID + ".suffix");
+            int tagWeight = ZTags.tagsConfig.getInt("tags." + tagID + ".weight");
+            tag = new Tag(tagID, tagName, tagPrefix, tagSuffix, tagWeight);
+        } else {
+            tag = ZTags.database.getTag(tagID);
+        }
 
         ItemStack tagNameItemStack = new ItemStack(Material.NAME_TAG, 1);
         ItemMeta tagNameMeta = tagNameItemStack.getItemMeta();
         tagNameMeta.setDisplayName("§aClick here to modify the tag name");
         List<String> tagNameMetaLore = new ArrayList<>();
-        tagNameMetaLore.add("§7Current tag name: §r" + ZTags.translateColorCodes(tagName));
+        tagNameMetaLore.add("§7Current tag name: §r" + ZTags.translateColorCodes(tag.getName()));
         tagNameMeta.setLore(tagNameMetaLore);
         tagNameItemStack.setItemMeta(tagNameMeta);
 
@@ -41,7 +49,7 @@ public class ModTagMenu implements Listener {
         ItemMeta tagPrefixMeta = tagPrefixItemStack.getItemMeta();
         tagPrefixMeta.setDisplayName("§aClick here to modify the tag prefix");
         List<String> tagPrefixMetaLore = new ArrayList<>();
-        tagPrefixMetaLore.add("§7Current tag prefix: " + ZTags.translateColorCodes(tagPrefix));
+        tagPrefixMetaLore.add("§7Current tag prefix: " + ZTags.translateColorCodes(tag.getPrefix()));
         tagPrefixMeta.setLore(tagPrefixMetaLore);
         tagPrefixItemStack.setItemMeta(tagPrefixMeta);
 
@@ -49,7 +57,7 @@ public class ModTagMenu implements Listener {
         ItemMeta tagSuffixMeta = tagSuffixItemStack.getItemMeta();
         tagSuffixMeta.setDisplayName("§aClick here to modify the tag suffix");
         List<String> tagSuffixMetaLore = new ArrayList<>();
-        tagSuffixMetaLore.add("§7Current tag suffix: " + ZTags.translateColorCodes(tagSuffix));
+        tagSuffixMetaLore.add("§7Current tag suffix: " + ZTags.translateColorCodes(tag.getSuffix()));
         tagSuffixMeta.setLore(tagSuffixMetaLore);
         tagSuffixItemStack.setItemMeta(tagSuffixMeta);
 
@@ -57,7 +65,7 @@ public class ModTagMenu implements Listener {
         ItemMeta tagWeightMeta = tagWeightItemStack.getItemMeta();
         tagWeightMeta.setDisplayName("§aClick here to modify the tag weight");
         List<String> tagWeightMetaLore = new ArrayList<>();
-        tagWeightMetaLore.add("§7Current tag weight: " + tagWeight);
+        tagWeightMetaLore.add("§7Current tag weight: " + tag.getWeight());
         tagWeightMeta.setLore(tagWeightMetaLore);
         tagWeightItemStack.setItemMeta(tagWeightMeta);
 
@@ -100,7 +108,6 @@ public class ModTagMenu implements Listener {
             }
 
             if (slot == 45) {
-                ZTags.getPlugin(ZTags.class).saveYmlTags();
                 player.closeInventory();
             } else if (slot == 53) {
                 player.closeInventory();
@@ -134,30 +141,55 @@ public class ModTagMenu implements Listener {
 
             if (inputNumber <= 4) {
                 String tagID = playerInputs.get(playerUUID)[0];
-                if (inputNumber == 1) {
-                    ZTags.tagsConfig.set("tags."+tagID+".name", message);
-                    player.sendMessage("§aSuccessfuly changed the tag name");
-                } else if (inputNumber == 2) {
-                    ZTags.tagsConfig.set("tags."+tagID+".weight", Integer.parseInt(message));
-                    player.sendMessage("§aSuccessfuly changed the tag weight");
-                } else if (inputNumber == 3) {
-                    ZTags.tagsConfig.set("tags."+tagID+".prefix", message);
-                    player.sendMessage("§aSuccessfuly changed the tag prefix");
-                } else if (inputNumber == 4) {
-                    ZTags.tagsConfig.set("tags."+tagID+".suffix", message);
-                    player.sendMessage("§aSuccessfuly changed the tag suffix");
+                if (ZTags.database == null) {
+                    if (inputNumber == 1) {
+                        ZTags.tagsConfig.set("tags." + tagID + ".name", message);
+                        player.sendMessage("§aSuccessfuly changed the tag name");
+                    } else if (inputNumber == 2) {
+                        ZTags.tagsConfig.set("tags." + tagID + ".weight", Integer.parseInt(message));
+                        player.sendMessage("§aSuccessfuly changed the tag weight");
+                    } else if (inputNumber == 3) {
+                        ZTags.tagsConfig.set("tags." + tagID + ".prefix", message);
+                        player.sendMessage("§aSuccessfuly changed the tag prefix");
+                    } else if (inputNumber == 4) {
+                        ZTags.tagsConfig.set("tags." + tagID + ".suffix", message);
+                        player.sendMessage("§aSuccessfuly changed the tag suffix");
+                    }
+                } else {
+                    Tag tag = ZTags.database.getTag(tagID);
+                    if (inputNumber == 1) {
+                        tag.setName(message);
+                        ZTags.database.addOrUpdateTag(tag);
+                    } else if (inputNumber == 2) {
+                        tag.setWeight(Integer.parseInt(message));
+                        ZTags.database.addOrUpdateTag(tag);
+                    } else if (inputNumber == 3) {
+                        tag.setPrefix(message);
+                        ZTags.database.addOrUpdateTag(tag);
+                    } else if (inputNumber == 4) {
+                        tag.setSuffix(message);
+                        ZTags.database.addOrUpdateTag(tag);
+                    }
                 }
-                waitingForInput.remove(playerUUID);
             }
+            waitingForInput.remove(playerUUID);
         }
     }
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         String playerUUID = event.getPlayer().getUniqueId().toString();
-        if (!ZTags.playerDataConfig.contains(playerUUID)) {
-            String tagMin = ZTags.getPlugin(ZTags.class).getTagWithMinimumWeight();
-            ZTags.playerDataConfig.set(playerUUID, tagMin);
+        if (ZTags.database == null) {
+            if (!ZTags.playerDataConfig.contains(playerUUID)) {
+                String tagMin = ZTags.getPlugin(ZTags.class).getTagWithMinimumWeight().getID();
+                ZTags.playerDataConfig.set(playerUUID, tagMin);
+            }
+        } else {
+            String tagId = ZTags.database.getTagForUser(playerUUID);
+            if (tagId == null) {
+                String tagMin = ZTags.getPlugin(ZTags.class).getTagWithMinimumWeight().getID();
+                ZTags.database.addOrUpdateUserData(playerUUID, tagMin);
+            }
         }
     }
 
