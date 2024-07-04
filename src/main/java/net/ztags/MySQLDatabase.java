@@ -56,6 +56,7 @@ public class MySQLDatabase {
                 + ")";
 
         try (PreparedStatement statement = connection.prepareStatement(createTagsTableSQL)) {
+            validateConnection();
             statement.executeUpdate();
             Bukkit.getLogger().info("Table 'tags' created successfully.");
         } catch (SQLException e) {
@@ -71,6 +72,7 @@ public class MySQLDatabase {
                 + ")";
 
         try (PreparedStatement statement = connection.prepareStatement(createUserDataTableSQL)) {
+            validateConnection();
             statement.executeUpdate();
             Bukkit.getLogger().info("Table 'user_data' created successfully.");
         } catch (SQLException e) {
@@ -83,6 +85,7 @@ public class MySQLDatabase {
                 "ON DUPLICATE KEY UPDATE tagid = VALUES(tagid)";
 
         try (PreparedStatement statement = connection.prepareStatement(addOrUpdateUserDataSQL)) {
+            validateConnection();
             statement.setString(1, uuid);
             statement.setString(2, tagid);
 
@@ -93,20 +96,20 @@ public class MySQLDatabase {
     }
 
     public String getTagForUser(String uuid) {
-        String getTagForUserSQL = "SELECT tagid FROM user_data WHERE uuid = ?";
-
-        try (PreparedStatement statement = connection.prepareStatement(getTagForUserSQL)) {
-            statement.setString(1, uuid);
-
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    return resultSet.getString("tagid");
+        try {
+            validateConnection();
+            String getTagForUserSQL = "SELECT tagid FROM user_data WHERE uuid = ?";
+            try (PreparedStatement statement = connection.prepareStatement(getTagForUserSQL)) {
+                statement.setString(1, uuid);
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        return resultSet.getString("tagid");
+                    }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-
         return null;
     }
 
@@ -116,6 +119,7 @@ public class MySQLDatabase {
                 "ON DUPLICATE KEY UPDATE name = VALUES(name), prefix = VALUES(prefix), suffix = VALUES(suffix), weight = VALUES(weight)";
 
         try (PreparedStatement statement = connection.prepareStatement(addOrUpdateTagSQL)) {
+            validateConnection();
             statement.setString(1, tag.getID());
             statement.setString(2, tag.getName());
             statement.setString(3, tag.getPrefix());
@@ -133,6 +137,7 @@ public class MySQLDatabase {
         String deleteTagSQL = "DELETE FROM tags WHERE tagid = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(deleteTagSQL)) {
+            validateConnection();
             statement.setString(1, tagid);
             statement.executeUpdate();
         } catch (SQLException e) {
@@ -145,6 +150,7 @@ public class MySQLDatabase {
         String getTagSQL = "SELECT * FROM tags WHERE tagid = ?";
 
         try (PreparedStatement statement = connection.prepareStatement(getTagSQL)) {
+            validateConnection();
             statement.setString(1, tagid);
 
             try (ResultSet resultSet = statement.executeQuery()) {
@@ -170,6 +176,7 @@ public class MySQLDatabase {
         String getAllTagsSQL = "SELECT * FROM tags";
 
         try (PreparedStatement statement = connection.prepareStatement(getAllTagsSQL)) {
+            validateConnection();
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {
                     tags.add(new Tag(
@@ -187,5 +194,12 @@ public class MySQLDatabase {
 
         return tags;
     }
+
+    private void validateConnection() throws SQLException {
+        if (connection == null || connection.isClosed() || !connection.isValid(2)) {
+            connect();
+        }
+    }
+
 
 }
