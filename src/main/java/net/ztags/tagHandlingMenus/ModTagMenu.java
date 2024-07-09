@@ -1,5 +1,6 @@
 package net.ztags.tagHandlingMenus;
 
+import net.ztags.Buttons;
 import net.ztags.Tag;
 import net.ztags.ZTags;
 import net.ztags.tagHandlingMenus.holders.ModTagMenuHolder;
@@ -84,8 +85,9 @@ public class ModTagMenu implements Listener {
         menu.setItem(15, tagPrefixItemStack);
         menu.setItem(16, tagSuffixItemStack);
 
-        menu.setItem(45, saveBtn);
-        menu.setItem(53, cancelBtn);
+        menu.setItem(45, Buttons.getBackBtn("§1§lBack"));
+        menu.setItem(46, Buttons.getCloseBtn("§c§lClose"));
+        menu.setItem(53, Buttons.getSubBtn("§c§lDelete tag"));
 
         player.openInventory(menu);
     }
@@ -106,11 +108,19 @@ public class ModTagMenu implements Listener {
             } else if (slot == 16) {
                 openChatInput(player, tagID, 4);
             }
-
             if (slot == 45) {
+                ListTagModMenu.openMenu(player);
+            }
+            if (slot == 46) {
                 player.closeInventory();
-            } else if (slot == 53) {
-                player.closeInventory();
+            }
+            if (slot == 53) {
+                if (ZTags.database == null) {
+                    ZTags.tagsConfig.set("tags."+tagID, null);
+                } else {
+                    ZTags.database.deleteTag(tagID);
+                }
+                ListTagModMenu.openMenu(player);
             }
         }
     }
@@ -120,7 +130,7 @@ public class ModTagMenu implements Listener {
         playerInputs.put(player.getUniqueId(), inputData);
         waitingForInput.put(player.getUniqueId(), inputNumber);
         player.closeInventory();
-        player.sendMessage("§aType '§cCancel§a' to cancel the action");
+        player.sendMessage("§aType '§cCancel§a' to cancel the action, or '§6null§a' to set it to blank.");
     }
 
 
@@ -139,21 +149,33 @@ public class ModTagMenu implements Listener {
                 return;
             }
 
+            if (message.equals("null")) {
+                if (inputNumber != 2) {
+                    message = "";
+                } else {
+                    message = "0";
+                }
+            }
+
             if (inputNumber <= 4) {
                 String tagID = playerInputs.get(playerUUID)[0];
                 if (ZTags.database == null) {
                     if (inputNumber == 1) {
                         ZTags.tagsConfig.set("tags." + tagID + ".name", message);
                         player.sendMessage("§aSuccessfuly changed the tag name");
+                        openMenu(player, tagID);
                     } else if (inputNumber == 2) {
                         ZTags.tagsConfig.set("tags." + tagID + ".weight", Integer.parseInt(message));
                         player.sendMessage("§aSuccessfuly changed the tag weight");
+                        openMenu(player, tagID);
                     } else if (inputNumber == 3) {
                         ZTags.tagsConfig.set("tags." + tagID + ".prefix", message);
                         player.sendMessage("§aSuccessfuly changed the tag prefix");
+                        openMenu(player, tagID);
                     } else if (inputNumber == 4) {
                         ZTags.tagsConfig.set("tags." + tagID + ".suffix", message);
                         player.sendMessage("§aSuccessfuly changed the tag suffix");
+                        openMenu(player, tagID);
                     }
                 } else {
                     Tag tag = ZTags.database.getTag(tagID);

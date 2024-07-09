@@ -14,6 +14,12 @@ import java.util.Set;
 
 public class ZTags extends JavaPlugin {
 
+    private static JavaPlugin instance;
+
+    public static JavaPlugin getInstance() {
+        return instance;
+    }
+    
     private File configFile;
     private YamlConfiguration config;
 
@@ -27,6 +33,7 @@ public class ZTags extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        instance = this;
         loadYmlConfig();
 
         String databaseUrl = config.getString("mysql.url");
@@ -46,6 +53,9 @@ public class ZTags extends JavaPlugin {
             } catch (Exception e) {
                 getLogger().severe("Failed to connect to MySQL/MariaDB: " + e.getMessage());
             }
+        } else {
+            loadYmlTags();
+            loadYmlPlayerData();
         }
 
         getServer().getPluginManager().registerEvents(new TagsMenu(), this);

@@ -42,7 +42,7 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
 
             if (args[0].equalsIgnoreCase("tag")) {
                 if (args.length < 2) {
-                    player.sendMessage("§cUsage: /ztags tag <list|create|modify|remove> <name>");
+                    player.sendMessage("§cUsage: /ztags tag <list|create|modify|remove|import|export> <name>");
                     return true;
                 }
 
@@ -63,8 +63,11 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
                     case "import":
                         handleImportTag(player, args);
                         break;
+                    case "export":
+                        handleExportTag(player, args);
+                        break;
                     default:
-                        player.sendMessage("§cUsage: /ztags tag <list|create|modify|remove> <name>");
+                        player.sendMessage("§cUsage: /ztags tag <list|create|modify|remove|import|export> <name>");
                         break;
                 }
                 return true;
@@ -184,17 +187,39 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
     }
 
     private void handleImportTag(Player player, String[] args) {
-        ZTags.getPlugin(ZTags.class).loadYmlTags();
-        Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
-        for (String tagKey : tagKeys) {
-            ConfigurationSection tagSection = ZTags.tagsConfig.getConfigurationSection("tags." + tagKey);
-            if (tagSection != null && player.hasPermission("ztags.tag." + tagKey)) {
-                String name = tagSection.getString("name");
-                String prefix = tagSection.getString("prefix");
-                String suffix = tagSection.getString("suffix");
-                int weight = tagSection.getInt("weight");
-                ZTags.database.addOrUpdateTag(new Tag(tagKey, name, prefix, suffix, weight));
+        if (ZTags.database != null) {
+            ZTags.getPlugin(ZTags.class).loadYmlTags();
+
+
+            for (Tag tag : ZTags.database.getAllTags()) {
+                ZTags.tagsConfig.set("tags."+tag.getID()+".name", tag.getName());
+                ZTags.tagsConfig.set("tags."+tag.getID()+".prefix", tag.getPrefix());
+                ZTags.tagsConfig.set("tags."+tag.getID()+".suffix", tag.getSuffix());
+                ZTags.tagsConfig.set("tags."+tag.getID()+".weight", tag.getWeight());
+                ZTags.tagsConfig.set("tags."+tag.getID()+".weight", tag.getWeight());
             }
+            ZTags.getPlugin(ZTags.class).saveYmlTags();
+        } else {
+            player.sendMessage("§c§lNot connected to a Database!");
+        }
+    }
+
+    private void handleExportTag(Player player, String[] args) {
+        if (ZTags.database != null) {
+            ZTags.getPlugin(ZTags.class).loadYmlTags();
+            Set<String> tagKeys = ZTags.tagsConfig.getConfigurationSection("tags").getKeys(false);
+            for (String tagKey : tagKeys) {
+                ConfigurationSection tagSection = ZTags.tagsConfig.getConfigurationSection("tags." + tagKey);
+                if (tagSection != null && player.hasPermission("ztags.tag." + tagKey)) {
+                    String name = tagSection.getString("name");
+                    String prefix = tagSection.getString("prefix");
+                    String suffix = tagSection.getString("suffix");
+                    int weight = tagSection.getInt("weight");
+                    ZTags.database.addOrUpdateTag(new Tag(tagKey, name, prefix, suffix, weight));
+                }
+            }
+        } else {
+            player.sendMessage("§c§lNot connected to a Database!");
         }
     }
 
@@ -214,8 +239,12 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
                 completions.add("create");
                 completions.add("modify");
                 completions.add("remove");
+                completions.add("import");
+                completions.add("export");
             } else if (args.length == 3 && args[0].equalsIgnoreCase("tag")
                     && !args[1].equalsIgnoreCase("list")
+                    && !args[1].equalsIgnoreCase("import")
+                    && !args[1].equalsIgnoreCase("export")
                     && !args[1].equalsIgnoreCase("create")) {
 
                 Set<String> tagKeys;

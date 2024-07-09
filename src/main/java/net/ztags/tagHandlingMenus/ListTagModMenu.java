@@ -62,7 +62,6 @@ public class ListTagModMenu implements Listener {
                 menu.addItem(tagI);
             }
         }
-
         player.openInventory(menu);
     }
 
@@ -95,7 +94,6 @@ public class ListTagModMenu implements Listener {
                             tag.setItemMeta(tagMeta);
 
                             if (clickedItem.equals(tag)) {
-                                player.closeInventory();
                                 ModTagMenu.openMenu(player, tagKey);
                             }
                         }
